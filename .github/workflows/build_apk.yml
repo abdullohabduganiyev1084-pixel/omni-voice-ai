@@ -27,10 +27,10 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: 🛠️ Auto-Fix Android & Gradle Config
+      - name: 🛠️ Auto-Fix Android Config
         run: |
           rm -rf android
-          flutter create --platforms=android --org com.omni .
+          flutter create --project-name=omni_voice_ai --platforms=android --org=com.omni .
           flutter pub get
 
       - name: 🔨 Build Release APK
