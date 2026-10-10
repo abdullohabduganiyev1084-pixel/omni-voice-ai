@@ -27,10 +27,10 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: 🛠️ Ensure Flutter Project Config
+      - name: 🛠️ Auto-Fix Android & Gradle Config
         run: |
-          flutter config --no-analytics
-          flutter create --platforms=android --org com.omni . || true
+          rm -rf android
+          flutter create --platforms=android --org com.omni .
           flutter pub get
 
       - name: 🔨 Build Release APK
