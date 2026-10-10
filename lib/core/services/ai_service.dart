@@ -6,7 +6,7 @@ import '../constants/api_keys.dart';
 enum AiProvider { groq, gemini }
 
 class AiCommandResult {
-  final String action; // 'YOUTUBE_OPEN', 'ANSWER_CALL', 'END_CALL', 'LAUNCH_APP', 'GLOBAL_NAV', 'VOLUME', 'CLICK_TEXT', 'CHAT'
+  final String action;
   final Map<String, dynamic> params;
   final String speechText;
   final String rawResponse;
@@ -43,43 +43,33 @@ Mumkin bo'lgan ACTION_NAME va params turlari:
    - "query": "qidirilayotgan mavzu yoki video nomi"
    - "videoId": "agar aniq video ID bo'lsa yoki bo'sh"
    - "timeSeconds": sekundlar soni (masalan: 5-minut bo'lsa 300, 2-minut bo'lsa 120, 0 agar boshidan)
-   Misol: "YouTube ga kirib lofi musiqani 5-minutidan qo'y" -> action: "YOUTUBE_OPEN", params: {"query": "lofi hip hop chill beats", "timeSeconds": 300}, speech: "YouTube da Lofi musiqani 5-daqiqasidan qo'ymoqdaman."
 
 2. "ANSWER_CALL":
-   - Foydalanuvchi "answer the call", "qo'ng'iroqqa javob ber", "ol", "ko'tar" desa.
    - params: {}
    - speech: "Qo'ng'iroqqa javob berildi."
 
 3. "END_CALL":
-   - Foydalanuvchi "rad et", "go'shakni qo'y", "decline" desa.
    - params: {}
    - speech: "Qo'ng'iroq tugatildi."
 
 4. "LAUNCH_APP":
-   - "appName": "youtube", "telegram", "camera", "settings", "chrome", "phone", yoki boshqa ilova nomi.
-   - speech: "Telegram ilovasi ochilmoqda."
+   - "appName": "youtube", "telegram", "camera", "settings", "chrome", "phone"
+   - speech: "Ilova ochilmoqda."
 
 5. "GLOBAL_NAV":
    - "type": "home" | "back" | "recents" | "notifications" | "scroll_down" | "scroll_up"
-   - speech: "Bajarildi."
 
 6. "VOLUME":
    - "level": 0 dan 100 gacha raqam
-   - speech: "Ovoz balandligi 80 foizga o'rnatildi."
 
 7. "CLICK_TEXT":
-   - "text": "ekranda bosilishi kerak bo'lgan tugma matni"
-   - speech: "Tugma bosildi."
+   - "text": "bosilishi kerak bo'lgan tugma matni"
 
 8. "CHAT":
-   - Foydalanuvchi savol so'rasa yoki shunchaki suhbatlashsa.
    - params: {}
-   - speech: "To'g'ridan-to'g'ri foydalanuvchiga qisqa va aniq javob."
-
-Qat'iy qoida: FAQAT va FAQAT toza JSON formatida javob bering, hech qanday markdown ```json yoki ortiqcha so'z qo'shmang!
+   - speech: "Foydalanuvchiga to'g'ridan-to'g'ri qisqa javob."
 ''';
 
-  /// Buyruqni tahlil qilish va bajarish
   static Future<AiCommandResult> processCommand(String userVoiceInput) async {
     final stopwatch = Stopwatch()..start();
 
@@ -90,7 +80,7 @@ Qat'iy qoida: FAQAT va FAQAT toza JSON formatida javob bering, hech qanday markd
         return await _callGemini(userVoiceInput, stopwatch);
       }
     } catch (e) {
-      debugPrint('AI Processing error: $e. Falling back...');
+      debugPrint('AI Processing error: $e');
       try {
         if (activeProvider == AiProvider.groq) {
           return await _callGemini(userVoiceInput, stopwatch);
@@ -104,7 +94,6 @@ Qat'iy qoida: FAQAT va FAQAT toza JSON formatida javob bering, hech qanday markd
     }
   }
 
-  /// Groq API orqali chaqirish (Ultra-tez Llama 3.3 70B)
   static Future<AiCommandResult> _callGroq(String prompt, Stopwatch sw) async {
     final url = Uri.parse('https://api.groq.com/openai/v1/chat/completions');
 
@@ -137,9 +126,7 @@ Qat'iy qoida: FAQAT va FAQAT toza JSON formatida javob bering, hech qanday markd
     }
   }
 
-  /// Google Gemini API orqali chaqirish
   static Future<AiCommandResult> _callGemini(String prompt, Stopwatch sw) async {
-    // Agar API kalit boshida AQ. bo'lsa yoki standart kalit bo'lsa
     final cleanKey = customGeminiKey.trim();
     final url = Uri.parse(
         'https://generativelanguage.googleapis.com/v1beta/models/$geminiModel:generateContent?key=$cleanKey');
@@ -149,11 +136,15 @@ Qat'iy qoida: FAQAT va FAQAT toza JSON formatida javob bering, hech qanday markd
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'system_instruction': {
-          'parts': [{'text': systemInstruction}]
+          'parts': [
+            {'text': systemInstruction}
+          ]
         },
         'contents': [
           {
-            'parts': [{'text': prompt}]
+            'parts': [
+              {'text': prompt}
+            ]
           }
         ],
         'generationConfig': {
@@ -176,7 +167,6 @@ Qat'iy qoida: FAQAT va FAQAT toza JSON formatida javob bering, hech qanday markd
 
   static AiCommandResult _parseJsonResponse(String rawJson, int latency) {
     try {
-      // Clean JSON if code fences exist
       var cleaned = rawJson.trim();
       if (cleaned.startsWith('```json')) {
         cleaned = cleaned.substring(7);
@@ -208,11 +198,9 @@ Qat'iy qoida: FAQAT va FAQAT toza JSON formatida javob bering, hech qanday markd
     }
   }
 
-  /// Offline / Fallback qoidalar (Tarmoq yoki API sekin bo'lsa darhol ishlash uchun)
   static AiCommandResult _localHeuristicFallback(String input, int latency) {
     final lower = input.toLowerCase();
 
-    // YouTube buyrug'i
     if (lower.contains('youtube') || lower.contains('yutub') || lower.contains('video') || lower.contains('qo\'y')) {
       int seconds = 0;
       final minMatch = RegExp(r'(\d+)\s*(?:minut|daqiqa|min)').firstMatch(lower);
@@ -221,21 +209,24 @@ Qat'iy qoida: FAQAT va FAQAT toza JSON formatida javob bering, hech qanday markd
       }
 
       String query = input
-          .replaceAll(RegExp(r'youtube(?:ga)?|yutub(?:ga)?|videoni|qo\'y|och|kirib|minutiga|daqiqa', caseSensitive: false), '')
+          .replaceAll('youtube', '')
+          .replaceAll('yutub', '')
+          .replaceAll('videoni', '')
+          .replaceAll('qo\'y', '')
+          .replaceAll('och', '')
           .trim();
       if (query.isEmpty) query = 'trending music';
 
       return AiCommandResult(
         action: 'YOUTUBE_OPEN',
         params: {'query': query, 'timeSeconds': seconds},
-        speechText: 'YouTube da "$query" qidirilmoqda ${seconds > 0 ? "$seconds soniyadan" : ""}.',
+        speechText: 'YouTube da "$query" ochilmoqda.',
         rawResponse: 'Fallback parser',
         latencyMs: latency,
       );
     }
 
-    // Qo'ng'iroqqa javob berish
-    if (lower.contains('answer') || lower.contains('javob ber') || lower.contains('ko\'tar') || lower.contains('ol')) {
+    if (lower.contains('answer') || lower.contains('javob') || lower.contains('ko\'tar')) {
       return AiCommandResult(
         action: 'ANSWER_CALL',
         params: {},
@@ -245,8 +236,7 @@ Qat'iy qoida: FAQAT va FAQAT toza JSON formatida javob bering, hech qanday markd
       );
     }
 
-    // Telegram
-    if (lower.contains('telegram') || lower.contains('telefram')) {
+    if (lower.contains('telegram')) {
       return AiCommandResult(
         action: 'LAUNCH_APP',
         params: {'appName': 'telegram'},
@@ -256,21 +246,10 @@ Qat'iy qoida: FAQAT va FAQAT toza JSON formatida javob bering, hech qanday markd
       );
     }
 
-    // Home / Back
-    if (lower.contains('orqaga') || lower.contains('back')) {
-      return AiCommandResult(
-        action: 'GLOBAL_NAV',
-        params: {'type': 'back'},
-        speechText: 'Orqaga qaytildi.',
-        rawResponse: 'Fallback parser',
-        latencyMs: latency,
-      );
-    }
-
     return AiCommandResult(
       action: 'CHAT',
       params: {},
-      speechText: 'Sizni eshitdim: "$input". Sizga qanday yordam bera olaman?',
+      speechText: 'Sizni eshitdim: "$input".',
       rawResponse: 'Fallback parser',
       latencyMs: latency,
     );
